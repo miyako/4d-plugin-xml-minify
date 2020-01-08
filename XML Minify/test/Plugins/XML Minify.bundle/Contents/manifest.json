@@ -1,0 +1,10 @@
+{
+	"name": "XML Minify",
+	"id": 20000,
+	"commands": [
+		{
+			"theme": "XML Minify",
+			"syntax": "XML Minify(&T):T"
+		}
+	]
+}
