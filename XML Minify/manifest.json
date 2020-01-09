@@ -4,7 +4,8 @@
 	"commands": [
 		{
 			"theme": "XML Minify",
-			"syntax": "XML Minify(&T):T"
+			"syntax": "XML Minify(&T):T",
+			"threadSafe": true
 		}
 	]
 }

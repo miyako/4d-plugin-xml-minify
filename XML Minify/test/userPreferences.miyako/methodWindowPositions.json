@@ -144,10 +144,10 @@
 		"height": 762
 	},
 	"Sources/Methods/TEST.4dm": {
-		"left": 0,
-		"top": 78,
-		"width": 791,
-		"height": 703
+		"left": 6,
+		"top": 135,
+		"width": 749,
+		"height": 665
 	},
 	"Sources/Methods/TEST_v17.4dm": {
 		"left": 450,
@@ -158,7 +158,7 @@
 	"Sources/Methods/update_manifest_json.4dm": {
 		"left": 478,
 		"top": 140,
-		"width": 1129,
-		"height": 787
+		"width": 758,
+		"height": 674
 	}
 }
