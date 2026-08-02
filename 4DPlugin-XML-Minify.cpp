@@ -81,41 +81,66 @@ void XML_Minify(PA_PluginParameters params) {
     sLONG_PTR *pResult = (sLONG_PTR *)params->fResult;
     PackagePtr pParams = (PackagePtr)params->fParameters;
     
-    C_TEXT xml;
     C_TEXT returnValue;
     
-    xml.fromParamAtIndex(pParams, 1);
-    
-    CUTF8String u8;
-    xml.copyUTF8String(&u8);
-    
-    xmlKeepBlanksDefault(0);
-    
-    xmlDocPtr xmlDoc = xmlParseMemory((const char *)u8.c_str(), (int)u8.size());
-    
-    if(xmlDoc) {
-       
-        xmlNodePtr xmlNodeRoot = xmlDocGetRootElement(xmlDoc);
+    /*
+     Everything that can plausibly throw (C_TEXT/CUTF8String allocation,
+     copyUTF8String, etc.) is wrapped in its own try/catch here so that
+     returnValue.setReturn(pResult) below is unconditional. Without this,
+     an exception thrown anywhere in this function is caught by the empty
+     catch(...) in PluginMain and setReturn() is never reached — 4D would
+     then hang waiting indefinitely for a return value that never comes,
+     which is a freeze, not a crash, and much harder to diagnose.
+     */
+    try {
+        C_TEXT xml;
+        xml.fromParamAtIndex(pParams, 1);
         
-        if(xmlNodeRoot) {
-            xmlBufferPtr buf = xmlBufferCreate();
+        CUTF8String u8;
+        xml.copyUTF8String(&u8);
+        
+        /*
+         Use xmlReadMemory with an explicit XML_PARSE_NOBLANKS option instead of
+         xmlKeepBlanksDefault(0) + xmlParseMemory. xmlKeepBlanksDefault mutates a
+         process/thread-global libxml2 default rather than scoping the setting to
+         this one parse, which is unnecessary shared mutable state and a latent
+         concurrency hazard if this command is ever invoked from more than one
+         thread at a time. xmlReadMemory achieves the same "drop insignificant
+         whitespace" behavior per-call, with no global side effect.
+         */
+        xmlDocPtr xmlDoc = xmlReadMemory((const char *)u8.c_str(), (int)u8.size(),
+                                          NULL, NULL, XML_PARSE_NOBLANKS);
+        
+        if(xmlDoc) {
+           
+            xmlNodePtr xmlNodeRoot = xmlDocGetRootElement(xmlDoc);
             
-            if(buf) {
-                                
-                int len = xmlNodeDump(buf,
-                                      xmlDoc,
-                                      xmlNodeRoot,
-                                      0,
-                                      0);
+            if(xmlNodeRoot) {
+                xmlBufferPtr buf = xmlBufferCreate();
                 
-                if (len > 0) {
-                    returnValue.setUTF8String((const uint8_t *)xmlBufferContent(buf), len);
+                if(buf) {
+                                    
+                    int len = xmlNodeDump(buf,
+                                          xmlDoc,
+                                          xmlNodeRoot,
+                                          0,
+                                          0);
+                    
+                    if (len > 0) {
+                        returnValue.setUTF8String((const uint8_t *)xmlBufferContent(buf), len);
+                    }
+                    xmlBufferFree(buf);
                 }
-                xmlBufferFree(buf);
+                
             }
-            
+            xmlFreeDoc(xmlDoc);
         }
-        xmlFreeDoc(xmlDoc);
     }
+    catch(...)
+    {
+        // Leave returnValue empty/default on any failure — the caller still
+        // gets a defined result instead of 4D hanging on a missing return.
+    }
+    
     returnValue.setReturn(pResult);
 }
